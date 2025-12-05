@@ -409,6 +409,13 @@
     }
 }
 
+.banner_message .display_only_pill,
+.banner_message .display_only_group_pill {
+    /* In banner messages, align pills with the baseline
+       of the surrounding text for proper vertical alignment. */
+    vertical-align: baseline;
+}
+
 .display_only_group_pill .zulip-icon-user-group {
     /* Reserve the same square box for the user-group
        icon as on pill images. */
