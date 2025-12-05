@@ -414,6 +414,14 @@
     /* In banner messages, align pills with the baseline
        of the surrounding text for proper vertical alignment. */
     vertical-align: baseline;
+
+    /* Constrain the anchor to only wrap its content so the underline
+       doesn't extend beyond the text. */
+    > a,
+    > a.view_user_group_mention {
+        display: inline-block;
+        width: fit-content;
+    }
 }
 
 .display_only_group_pill .zulip-icon-user-group {
