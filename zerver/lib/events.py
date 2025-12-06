@@ -166,7 +166,6 @@ def fetch_initial_state_data(
     queue_id: str | None = "",
     client_gravatar: bool = False,
     user_avatar_url_field_optional: bool = False,
-    user_settings_object: bool = False,
     slim_presence: bool = False,
     presence_last_update_id_fetched_by_client: int | None = None,
     presence_history_limit_days: int | None = None,
@@ -875,17 +874,6 @@ def fetch_initial_state_data(
 
     if want("stop_words"):
         state["stop_words"] = read_stop_words()
-
-    if want("update_display_settings") and not user_settings_object:
-        for prop in UserProfile.display_settings_legacy:
-            state[prop] = getattr(settings_user, prop)
-        state["emojiset_choices"] = UserProfile.emojiset_choices()
-        state["timezone"] = canonicalize_timezone(settings_user.timezone)
-
-    if want("update_global_notifications") and not user_settings_object:
-        for notification in UserProfile.notification_settings_legacy:
-            state[notification] = getattr(settings_user, notification)
-        state["available_notification_sounds"] = get_available_notification_sounds()
 
     if want("user_settings"):
         state["user_settings"] = {}
@@ -1855,23 +1843,12 @@ def apply_event(
             state["realm_linkifiers"] = event["realm_linkifiers"]
     elif event["type"] == "realm_playgrounds":
         state["realm_playgrounds"] = event["realm_playgrounds"]
-    elif event["type"] == "update_display_settings":
-        if event["setting_name"] != "timezone":
-            assert event["setting_name"] in UserProfile.display_settings_legacy
-        state[event["setting_name"]] = event["setting"]
-    elif event["type"] == "update_global_notifications":
-        assert event["notification_name"] in UserProfile.notification_settings_legacy
-        state[event["notification_name"]] = event["setting"]
+
     elif event["type"] == "user_settings":
         # time zone setting is not included in property_types dict because
         # this setting is not a part of UserBaseSettings class.
         if event["property"] != "timezone":
             assert event["property"] in UserProfile.property_types
-        if event["property"] in {
-            **UserProfile.display_settings_legacy,
-            **UserProfile.notification_settings_legacy,
-        }:
-            state[event["property"]] = event["value"]
         state["user_settings"][event["property"]] = event["value"]
     elif event["type"] == "invites_changed":
         pass
@@ -2015,13 +1992,14 @@ class ClientCapabilities(TypedDict):
     bulk_message_deletion: NotRequired[bool]
     user_avatar_url_field_optional: NotRequired[bool]
     stream_typing_notifications: NotRequired[bool]
-    user_settings_object: NotRequired[bool]
     linkifier_url_template: NotRequired[bool]
     user_list_incomplete: NotRequired[bool]
     include_deactivated_groups: NotRequired[bool]
     archived_channels: NotRequired[bool]
     empty_topic_name: NotRequired[bool]
     simplified_presence_events: NotRequired[bool]
+    # Deprecated and no longer has any effect
+    user_settings_object: NotRequired[bool]
 
 
 DEFAULT_CLIENT_CAPABILITIES = ClientCapabilities(notification_settings_null=False)
@@ -2058,7 +2036,6 @@ def do_events_register(
         "user_avatar_url_field_optional", False
     )
     stream_typing_notifications = client_capabilities.get("stream_typing_notifications", False)
-    user_settings_object = client_capabilities.get("user_settings_object", False)
     linkifier_url_template = client_capabilities.get("linkifier_url_template", False)
     user_list_incomplete = client_capabilities.get("user_list_incomplete", False)
     include_deactivated_groups = client_capabilities.get("include_deactivated_groups", False)
@@ -2087,7 +2064,6 @@ def do_events_register(
             client_gravatar=client_gravatar,
             linkifier_url_template=linkifier_url_template,
             user_avatar_url_field_optional=user_avatar_url_field_optional,
-            user_settings_object=user_settings_object,
             user_list_incomplete=user_list_incomplete,
             archived_channels=archived_channels,
             # These presence params are a noop, because presence is not included.
@@ -2130,7 +2106,6 @@ def do_events_register(
         narrow=legacy_narrow,
         bulk_message_deletion=bulk_message_deletion,
         stream_typing_notifications=stream_typing_notifications,
-        user_settings_object=user_settings_object,
         pronouns_field_type_supported=pronouns_field_type_supported,
         linkifier_url_template=linkifier_url_template,
         user_list_incomplete=user_list_incomplete,
@@ -2150,7 +2125,6 @@ def do_events_register(
         queue_id=queue_id,
         client_gravatar=client_gravatar,
         user_avatar_url_field_optional=user_avatar_url_field_optional,
-        user_settings_object=user_settings_object,
         slim_presence=slim_presence,
         presence_last_update_id_fetched_by_client=presence_last_update_id_fetched_by_client,
         presence_history_limit_days=presence_history_limit_days,
